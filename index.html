@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Global</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div id="user-info" style="display:none;">
+            <img id="user-pic" alt="Profile Picture" />
+            <span id="user-name"></span>
+            <button id="sign-out">Déconnexion</button>
+        </div>
+        <div id="login-container">
+            <h1>Connectez-vous avec Google pour accéder au site</h1>
+            <button id="google-login">Se connecter avec Google</button>
+        </div>
+    </div>
+
+    <div id="chat-container" style="display:none;">
+        <h2>Chat Global</h2>
+        <div id="messages"></div>
+        <form id="message-form">
+            <input type="text" id="message-input" placeholder="Entrez un message">
+            <input type="file" id="image-input" accept="image/*">
+            <button type="submit">Envoyer</button>
+        </form>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
