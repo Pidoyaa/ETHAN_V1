@@ -1,49 +1,44 @@
 body {
     font-family: Arial, sans-serif;
-    background-image: url('background.jpg'); /* Ton image de fond */
-    background-size: cover;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-}
-
-.auth-container {
-    text-align: center;
-}
-
-#chat-container {
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: #f0f0f0;
     padding: 20px;
-    border-radius: 10px;
-    width: 400px;
+}
+
+#login-container, #chat-container {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 #messages {
+    border: 1px solid #ccc;
     height: 300px;
     overflow-y: scroll;
-    border: 1px solid #ccc;
-    padding: 10px;
     margin-bottom: 10px;
 }
 
 form {
     display: flex;
-    flex-direction: column;
+    gap: 10px;
 }
 
 input[type="text"] {
-    margin-bottom: 10px;
-    padding: 8px;
-    border-radius: 5px;
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
 }
 
 button {
     padding: 10px;
-    background-color: #007bff;
+    background-color: #28a745;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 4px;
     cursor: pointer;
+}
+
+button:hover {
+    background-color: #218838;
 }
