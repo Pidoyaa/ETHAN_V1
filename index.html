@@ -6,72 +6,99 @@
     <title>Chat Global</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <!-- Authentification et interface utilisateur -->
-    <div class="auth-container">
-        <div id="user-info" style="display:none;">
-            <img id="user-pic" alt="Profile Picture" />
-            <span id="user-name"></span>
-            <button id="sign-out">Déconnexion</button>
-        </div>
-        <div id="login-container">
-            <h1>Connectez-vous avec Google pour accéder au site</h1>
-            <button id="google-login-button">Se connecter avec Google</button>
-        </div>
+    <!-- Authentification Google -->
+    <div id="login-container">
+        <h1>Connectez-vous avec Google pour accéder au site</h1>
+        <button id="google-login-button">Se connecter avec Google</button>
     </div>
 
-    <!-- Chat global -->
-    <div id="chat-container" style="display:none;">
+    <!-- Chat global (affiché après connexion) -->
+    <div id="chat-container" style="display: none;">
         <h2>Chat Global</h2>
         <div id="messages"></div>
         <form id="message-form">
-            <input type="text" id="message-input" placeholder="Entrez un message">
+            <input type="text" id="message-input" placeholder="Entrez un message" required>
             <input type="file" id="image-input" accept="image/*">
             <button type="submit">Envoyer</button>
         </form>
     </div>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <!-- Scripts Firebase (via CDN) -->
+    <script type="module">
+        // Importer les fonctions nécessaires depuis les SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-analytics.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
-    <!-- Firebase configuration et logique de connexion -->
-    <script>
-      // Configuration Firebase
-      const firebaseConfig = {
-        apiKey: "AIzaSyAiN8qmbOIE-cnM-slY3s1vjoGByWyt8bk",
-        authDomain: "ethanv1.firebaseapp.com",
-        projectId: "ethanv1",
-        storageBucket: "ethanv1.appspot.com",
-        messagingSenderId: "15504428597",
-        appId: "1:15504428597:web:c77688cad724c1afdfab7c",
-        measurementId: "G-L7JPEWN3TE"
-      };
+        // Configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAiN8qmbOIE-cnM-slY3s1vjoGByWyt8bk",
+            authDomain: "ethanv1.firebaseapp.com",
+            projectId: "ethanv1",
+            storageBucket: "ethanv1.appspot.com",
+            messagingSenderId: "15504428597",
+            appId: "1:15504428597:web:c77688cad724c1afdfab7c",
+            measurementId: "G-L7JPEWN3TE"
+        };
 
-      // Initialiser Firebase
-      firebase.initializeApp(firebaseConfig);
-      firebase.analytics();
+        // Initialiser Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+        const database = getDatabase(app);
 
-      // Authentification Google
-      const auth = firebase.auth();
-      const provider = new firebase.auth.GoogleAuthProvider();
-
-      // Gestionnaire d'événement pour la connexion
-      document.getElementById('google-login-button').addEventListener('click', () => {
-        auth.signInWithPopup(provider).then((result) => {
-          console.log("Utilisateur connecté :", result.user);
-          document.getElementById('login-container').style.display = 'none';
-          document.getElementById('chat-container').style.display = 'block';
-          document.getElementById('user-name').textContent = result.user.displayName;
-          document.getElementById('user-pic').src = result.user.photoURL;
-        }).catch((error) => {
-          console.error("Erreur de connexion :", error);
+        // Gestion de la connexion
+        document.getElementById('google-login-button').addEventListener('click', () => {
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    const user = result.user;
+                    console.log("Utilisateur connecté :", user);
+                    document.getElementById('login-container').style.display = 'none';
+                    document.getElementById('chat-container').style.display = 'block';
+                    loadMessages();
+                })
+                .catch((error) => {
+                    console.error("Erreur de connexion :", error);
+                });
         });
-      });
-    </script>
 
+        // Chargement des messages
+        function loadMessages() {
+            const messagesRef = ref(database, 'messages/');
+            onValue(messagesRef, (snapshot) => {
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.innerHTML = ''; // Réinitialiser les messages
+                snapshot.forEach((childSnapshot) => {
+                    const messageData = childSnapshot.val();
+                    const messageElement = document.createElement('div');
+                    messageElement.innerHTML = `<strong>${messageData.user}</strong>: ${messageData.text}`;
+                    messagesDiv.appendChild(messageElement);
+                });
+            });
+        }
+
+        // Envoi de message
+        document.getElementById('message-form').addEventListener('submit', (event) => {
+            event.preventDefault();
+            const messageInput = document.getElementById('message-input');
+            const user = auth.currentUser;
+
+            if (user) {
+                const messageData = {
+                    user: user.displayName,
+                    text: messageInput.value
+                };
+
+                const newMessageRef = ref(database, 'messages/' + Date.now());
+                set(newMessageRef, messageData)
+                    .then(() => {
+                        messageInput.value = ''; // Réinitialiser le champ de message
+                    });
+            }
+        });
+    </script>
 </body>
 </html>
