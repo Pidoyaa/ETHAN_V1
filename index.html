@@ -7,14 +7,19 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Authentification Google -->
-    <div id="login-container">
-        <h1>Connectez-vous avec Google pour accéder au site</h1>
-        <button id="google-login-button">Se connecter avec Google</button>
+    <div class="auth-container">
+        <div id="user-info" style="display:none;">
+            <img id="user-pic" alt="Profile Picture" />
+            <span id="user-name"></span>
+            <button id="sign-out">Déconnexion</button>
+        </div>
+        <div id="login-container">
+            <h1>Connectez-vous avec Google pour accéder au site</h1>
+            <button id="google-login">Se connecter avec Google</button>
+        </div>
     </div>
 
-    <!-- Chat global (affiché après connexion) -->
-    <div id="chat-container" style="display: none;">
+    <div id="chat-container" style="display:none;">
         <h2>Chat Global</h2>
         <div id="messages"></div>
         <form id="message-form">
@@ -24,13 +29,11 @@
         </form>
     </div>
 
-    <!-- Scripts Firebase (via CDN) -->
     <script type="module">
-        // Importer les fonctions nécessaires depuis les SDKs
+        // Importer les fonctions nécessaires de Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-analytics.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
 
         // Configuration Firebase
         const firebaseConfig = {
@@ -45,60 +48,76 @@
 
         // Initialiser Firebase
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-        const database = getDatabase(app);
+        const db = getFirestore();
+        const auth = getAuth();
 
-        // Gestion de la connexion
-        document.getElementById('google-login-button').addEventListener('click', () => {
+        // Authentification Google
+        const provider = new GoogleAuthProvider();
+
+        document.getElementById('google-login').addEventListener('click', () => {
             signInWithPopup(auth, provider)
                 .then((result) => {
                     const user = result.user;
-                    console.log("Utilisateur connecté :", user);
+                    document.getElementById('user-pic').src = user.photoURL;
+                    document.getElementById('user-name').innerText = user.displayName;
+                    document.getElementById('user-info').style.display = 'block';
                     document.getElementById('login-container').style.display = 'none';
                     document.getElementById('chat-container').style.display = 'block';
-                    loadMessages();
+                    fetchMessages(); // Récupérer les messages après la connexion
                 })
                 .catch((error) => {
                     console.error("Erreur de connexion :", error);
                 });
         });
 
-        // Chargement des messages
-        function loadMessages() {
-            const messagesRef = ref(database, 'messages/');
-            onValue(messagesRef, (snapshot) => {
-                const messagesDiv = document.getElementById('messages');
-                messagesDiv.innerHTML = ''; // Réinitialiser les messages
-                snapshot.forEach((childSnapshot) => {
-                    const messageData = childSnapshot.val();
-                    const messageElement = document.createElement('div');
-                    messageElement.innerHTML = `<strong>${messageData.user}</strong>: ${messageData.text}`;
-                    messagesDiv.appendChild(messageElement);
-                });
+        // Déconnexion
+        document.getElementById('sign-out').addEventListener('click', () => {
+            signOut(auth).then(() => {
+                document.getElementById('user-info').style.display = 'none';
+                document.getElementById('login-container').style.display = 'block';
+                document.getElementById('chat-container').style.display = 'none';
+            }).catch((error) => {
+                console.error("Erreur de déconnexion :", error);
             });
-        }
+        });
 
-        // Envoi de message
-        document.getElementById('message-form').addEventListener('submit', (event) => {
+        // Envoyer un message
+        document.getElementById('message-form').addEventListener('submit', async (event) => {
             event.preventDefault();
             const messageInput = document.getElementById('message-input');
             const user = auth.currentUser;
 
             if (user) {
-                const messageData = {
-                    user: user.displayName,
-                    text: messageInput.value
-                };
-
-                const newMessageRef = ref(database, 'messages/' + Date.now());
-                set(newMessageRef, messageData)
-                    .then(() => {
-                        messageInput.value = ''; // Réinitialiser le champ de message
+                try {
+                    await addDoc(collection(db, "messages"), {
+                        text: messageInput.value,
+                        user: user.displayName,
+                        userPic: user.photoURL,
+                        timestamp: new Date()
                     });
+                    messageInput.value = ""; // Réinitialiser le champ de saisie
+                    fetchMessages(); // Récupérer les messages après l'envoi
+                } catch (error) {
+                    console.error("Erreur lors de l'envoi du message :", error);
+                }
             }
         });
+
+        // Récupérer les messages
+        const fetchMessages = async () => {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = ""; // Vider la liste de messages
+            const querySnapshot = await getDocs(collection(db, "messages"));
+            querySnapshot.forEach((doc) => {
+                const message = doc.data();
+                const messageElement = document.createElement("div");
+                messageElement.innerHTML = `
+                    <img src="${message.userPic}" alt="${message.user}" style="width: 30px; height: 30px; border-radius: 50%;">
+                    <strong>${message.user}:</strong> ${message.text}
+                `;
+                messagesDiv.appendChild(messageElement);
+            });
+        };
     </script>
 </body>
 </html>
